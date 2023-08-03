@@ -1,0 +1,150 @@
+{
+  "name": "database_offline_sqlserver",
+  "description": "This incident type refers to a situation where a SQLServer database goes offline, which can potentially cause disruptions in software or applications that rely on it. The incident is triggered by a monitoring system that detects the database's state is not available. A prompt response is necessary to resolve the issue and prevent any adverse impact on the system.",
+  "params": [
+    {
+      "name": "SQL_SERVER_SERVICE_NAME",
+      "value": ""
+    },
+    {
+      "name": "DATABASE_PASSWORD",
+      "value": ""
+    },
+    {
+      "name": "DATABASE_NAME",
+      "value": ""
+    },
+    {
+      "name": "DATABASE_USERNAME",
+      "value": ""
+    },
+    {
+      "name": "PORT_NUMBER",
+      "value": ""
+    },
+    {
+      "name": "INSTANCE_NAME",
+      "value": ""
+    },
+    {
+      "name": "SERVER_NAME",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Database Offline (SQLServer)\nThis incident type refers to a situation where a SQLServer database goes offline, which can potentially cause disruptions in software or applications that rely on it. The incident is triggered by a monitoring system that detects the database's state is not available. A prompt response is necessary to resolve the issue and prevent any adverse impact on the system."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if the SQL Server service is running"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `Get-Service -Name ${SQL_SERVER_SERVICE_NAME}`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the connection to the server"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `Test-NetConnection -ComputerName ${SERVER_NAME} -Port ${PORT_NUMBER}`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if the database is online"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `Invoke-Sqlcmd -Query \"SELECT name, state_desc FROM sys.databases\" -ServerInstance ${SERVER_NAME}\\${INSTANCE_NAME}`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the SQL Server error log for any issues"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `Get-EventLog -LogName Application -Source MSSQLSERVER | Where-Object {$_.EntryType -eq \"Error\"}`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Restart the SQL Server service"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `Restart-Service -Name ${SQL_SERVER_SERVICE_NAME} -Force`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Database configuration issues: Incorrect configuration of the SQLServer database can cause it to go offline. This could be due to changes made to the database that are not compatible with its current configuration."
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_db_check($DATABASE_PASSWORD, $DATABASE_NAME, $DATABASE_USERNAME, $SERVER_NAME)"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Restart the SQLServer database service to see if it can recover from the outage. This step is only recommended if the cause of the outage is unclear or if the service is not responding."
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_restart_sql_service()"
+    },
+    {
+      "name": "cell_16",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the server hosting the SQLServer database to ensure that it is running correctly and all services are operational."
+    },
+    {
+      "name": "cell_17",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_sqlserver_check_services($DATABASE_NAME, $SERVER_NAME)"
+    }
+  ]
+}
